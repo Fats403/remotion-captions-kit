@@ -1,6 +1,6 @@
 {
   "name": "remotion-captions-kit",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Animated caption presets and headless caption primitives for Remotion, built on @remotion/captions",
   "license": "MIT",
   "author": "Brayden Blackwell",

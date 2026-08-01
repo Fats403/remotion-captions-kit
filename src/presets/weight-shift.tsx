@@ -1,6 +1,5 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
-import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
@@ -12,8 +11,17 @@ const SHIFT_MS = 160;
 
 /**
  * The quiet one for talking heads: every word is visible, the active word
- * carries the weight (heavier, full opacity, a touch larger) while the
- * rest sit back. No color unless emphasis rules add it.
+ * carries the weight while the rest sit back. No color unless emphasis
+ * rules add it.
+ *
+ * The lift is built ONLY from things that don't touch layout: transform
+ * scale, opacity, and -webkit-text-stroke (which thickens glyph outlines
+ * without changing their advance widths). Word metrics therefore never
+ * change, so lines cannot re-wrap and spacing stays a font's natural
+ * spacing. An earlier version swapped fontWeight and reserved bold-width
+ * boxes per word — stable, but the per-word slack made inter-word gaps
+ * visibly uneven. Don't reintroduce metric changes here; an emphasis rule
+ * that sets fontWeight or fontStyle will bring the re-wrap back.
  */
 export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 	page,
@@ -29,7 +37,7 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 				style={{
 					fontFamily: t.fontFamily,
 					fontSize: t.fontSize,
-					fontWeight: 500,
+					fontWeight: 600,
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
 					textWrap: 'balance',
@@ -47,49 +55,23 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 						? easeOutCubic(windowProgress(timeMs, token.toMs, SHIFT_MS))
 						: 0;
 					const lift = inP * (1 - outP);
-
-					// The leading space stays OUTSIDE the sized box at constant
-					// weight. Boxing it with the word would center "space+word"
-					// as one unit, so the bold state (which fills the box) would
-					// sit visibly left of the light state.
-					const lead = token.text.match(/^\s*/)?.[0] ?? '';
-					const word = token.text.slice(lead.length);
+					const color = em?.color ?? t.textColor;
 
 					return (
-						// The lead space sits directly in the pre-wrap container,
-						// so it is preserved AND remains a soft-wrap opportunity.
-						<Fragment key={token.fromMs}>
-							{lead}
-							<span
-								style={{position: 'relative', display: 'inline-block'}}
-							>
-								{/* Invisible sizer at the heaviest weight the word can
-								    reach: the layout box never changes as the weight
-								    shifts, so the line can never re-wrap mid-page, and
-								    the word grows symmetrically around its own center. */}
-								<span
-									aria-hidden
-									style={{visibility: 'hidden', fontWeight: 800, ...em?.style}}
-								>
-									{word}
-								</span>
-								<span
-									style={{
-										position: 'absolute',
-										inset: 0,
-										textAlign: 'center',
-										whiteSpace: 'pre',
-										color: em?.color ?? t.textColor,
-										opacity: 0.55 + 0.45 * lift,
-										fontWeight: lift > 0.5 ? 800 : 500,
-										transform: `scale(${1 + 0.06 * lift})`,
-										...em?.style,
-									}}
-								>
-									{word}
-								</span>
-							</span>
-						</Fragment>
+						<span
+							key={token.fromMs}
+							style={{
+								display: 'inline-block',
+								whiteSpace: 'pre',
+								color,
+								opacity: 0.55 + 0.45 * lift,
+								transform: `scale(${1 + 0.07 * lift})`,
+								WebkitTextStroke: `${(t.fontSize / 40) * lift}px ${color}`,
+								...em?.style,
+							}}
+						>
+							{token.text}
+						</span>
 					);
 				})}
 			</div>
