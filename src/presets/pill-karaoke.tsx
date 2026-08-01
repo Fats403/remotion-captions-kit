@@ -36,6 +36,7 @@ export const PillKaraoke: React.FC<PresetProps & {page: TikTokPage}> = ({
 					fontSize: t.fontSize,
 					fontWeight: 800,
 					whiteSpace: 'pre-wrap',
+					textWrap: 'balance',
 					textAlign: 'center',
 					lineHeight: 1.2,
 					backgroundColor: t.pillColor,

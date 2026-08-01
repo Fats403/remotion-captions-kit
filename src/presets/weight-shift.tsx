@@ -1,5 +1,6 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
@@ -31,6 +32,7 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 					fontWeight: 500,
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
+					textWrap: 'balance',
 					lineHeight: 1.3,
 					textShadow: '0 2px 14px rgba(0,0,0,0.6)',
 				}}
@@ -46,21 +48,48 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 						: 0;
 					const lift = inP * (1 - outP);
 
+					// The leading space stays OUTSIDE the sized box at constant
+					// weight. Boxing it with the word would center "space+word"
+					// as one unit, so the bold state (which fills the box) would
+					// sit visibly left of the light state.
+					const lead = token.text.match(/^\s*/)?.[0] ?? '';
+					const word = token.text.slice(lead.length);
+
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								display: 'inline-block',
-								whiteSpace: 'pre',
-								color: em?.color ?? t.textColor,
-								opacity: 0.55 + 0.45 * lift,
-								fontWeight: lift > 0.5 ? 800 : 500,
-								transform: `scale(${1 + 0.06 * lift})`,
-								...em?.style,
-							}}
-						>
-							{token.text}
-						</span>
+						// The lead space sits directly in the pre-wrap container,
+						// so it is preserved AND remains a soft-wrap opportunity.
+						<Fragment key={token.fromMs}>
+							{lead}
+							<span
+								style={{position: 'relative', display: 'inline-block'}}
+							>
+								{/* Invisible sizer at the heaviest weight the word can
+								    reach: the layout box never changes as the weight
+								    shifts, so the line can never re-wrap mid-page, and
+								    the word grows symmetrically around its own center. */}
+								<span
+									aria-hidden
+									style={{visibility: 'hidden', fontWeight: 800, ...em?.style}}
+								>
+									{word}
+								</span>
+								<span
+									style={{
+										position: 'absolute',
+										inset: 0,
+										textAlign: 'center',
+										whiteSpace: 'pre',
+										color: em?.color ?? t.textColor,
+										opacity: 0.55 + 0.45 * lift,
+										fontWeight: lift > 0.5 ? 800 : 500,
+										transform: `scale(${1 + 0.06 * lift})`,
+										...em?.style,
+									}}
+								>
+									{word}
+								</span>
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>

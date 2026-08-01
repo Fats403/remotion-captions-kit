@@ -31,6 +31,7 @@ export const NeonGlow: React.FC<PresetProps & {page: TikTokPage}> = ({
 					fontWeight: 800,
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
+					textWrap: 'balance',
 					lineHeight: 1.25,
 				}}
 			>

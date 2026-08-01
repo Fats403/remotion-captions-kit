@@ -34,6 +34,7 @@ export const EditorialEmphasis: React.FC<PresetProps & {page: TikTokPage}> = ({
 					fontWeight: 600,
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
+					textWrap: 'balance',
 					lineHeight: 1.45,
 					letterSpacing: '0.005em',
 					textShadow: '0 2px 14px rgba(0,0,0,0.55)',

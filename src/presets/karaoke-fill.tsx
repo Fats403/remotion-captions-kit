@@ -27,6 +27,7 @@ export const KaraokeFill: React.FC<PresetProps & {page: TikTokPage}> = ({
 					fontWeight: 800,
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
+					textWrap: 'balance',
 					lineHeight: 1.25,
 					textShadow: '0 2px 12px rgba(0,0,0,0.65)',
 				}}
