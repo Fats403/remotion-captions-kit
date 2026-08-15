@@ -11,6 +11,9 @@ export type {
 	CreateCaptionPagesOutput,
 } from './create-caption-pages';
 export {resolveEmphasis} from './emphasis';
+export {normalizeCaptions} from './normalize-captions';
+export type {NormalizedWord} from './normalize-captions';
+export {endsClause, endsSentence} from './sentence-boundaries';
 export {splitCaptionsIntoWords} from './split-captions-into-words';
 export type {
 	SplitCaptionsIntoWordsInput,

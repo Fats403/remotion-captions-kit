@@ -13,6 +13,12 @@ export type UseCaptionPagesInput = {
 	silenceGapMs?: number;
 	/** Break pages after sentence-ending punctuation. Default true. */
 	breakOnPunctuation?: boolean;
+	/** Hard cap on characters per page. Default 42. */
+	maxCharsPerPage?: number;
+	/** Merge pages that would show for less than this. Default 300. */
+	minDurationMs?: number;
+	/** Fewest words a page should hold. Default 2, set to 1 to allow orphans. */
+	minWordsPerPage?: number;
 };
 
 /**
@@ -24,6 +30,9 @@ export const useCaptionPages = ({
 	maxDurationMs = 1200,
 	silenceGapMs = 400,
 	breakOnPunctuation = true,
+	maxCharsPerPage = 42,
+	minDurationMs = 300,
+	minWordsPerPage = 2,
 }: UseCaptionPagesInput): {pages: TikTokPage[]} => {
 	return useMemo(
 		() =>
@@ -32,7 +41,18 @@ export const useCaptionPages = ({
 				maxDurationMs,
 				silenceGapMs,
 				breakOnPunctuation,
+				maxCharsPerPage,
+				minDurationMs,
+				minWordsPerPage,
 			}),
-		[captions, maxDurationMs, silenceGapMs, breakOnPunctuation],
+		[
+			captions,
+			maxDurationMs,
+			silenceGapMs,
+			breakOnPunctuation,
+			maxCharsPerPage,
+			minDurationMs,
+			minWordsPerPage,
+		],
 	);
 };
