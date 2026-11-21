@@ -1,6 +1,7 @@
 import type {Caption, TikTokPage, TikTokToken} from '@remotion/captions';
 import type {NormalizedWord} from './normalize-captions';
 import {normalizeCaptions} from './normalize-captions';
+import {textWidth, tokenSpacing} from './scripts';
 import {endsClause, endsSentence} from './sentence-boundaries';
 
 export type CreateCaptionPagesInput = {
@@ -23,7 +24,8 @@ export type CreateCaptionPagesInput = {
 	/**
 	 * Hard cap on characters per page, so fast speech can't overflow the
 	 * safe area — time alone doesn't bound line length. Default 42, about
-	 * two comfortable lines at typical short-form caption sizes.
+	 * two comfortable lines at typical short-form caption sizes. A Chinese,
+	 * Japanese or Korean character counts as two, being about twice as wide.
 	 */
 	maxCharsPerPage?: number;
 	/**
@@ -49,6 +51,23 @@ export type CreateCaptionPagesInput = {
 	 * unblocks it.
 	 */
 	minWordsPerPage?: number;
+	/**
+	 * Most words a page holds. The short-form styles read in two or three;
+	 * OneWord in one. Default no limit.
+	 */
+	maxWordsPerPage?: number;
+	/**
+	 * Width of a run of text in px, set the way the captions are. With
+	 * `maxLineWidth`, a page fits when its words wrap into at most
+	 * `maxLines` lines, which holds for any font, weight, case or script
+	 * where a character count can't; the character cap then applies only
+	 * if it's set too. useCaptionPages builds this from the theme.
+	 */
+	measure?: (text: string) => number;
+	/** Width a line of caption may take, in px. */
+	maxLineWidth?: number;
+	/** Most lines a measured page wraps into. Default 2. */
+	maxLines?: number;
 };
 
 export type CreateCaptionPagesOutput = {
@@ -60,7 +79,9 @@ type Limits = {
 	maxCharsPerPage: number;
 	minDurationMs: number;
 	minWordsPerPage: number;
+	maxWordsPerPage: number;
 	silenceGapMs: number;
+	lines?: {measure: (text: string) => number; maxLineWidth: number; maxLines: number};
 };
 
 type Page = {
@@ -69,8 +90,11 @@ type Page = {
 	endMs: number;
 };
 
+/** The page as read: spaced as the presets draw it, so "三台の自転車が" has none. */
 const pageText = (words: NormalizedWord[]): string =>
-	words.map((w) => w.text).join(' ');
+	tokenSpacing(words.map((w) => w.text))
+		.map(({text, space}) => space + text)
+		.join('');
 
 const page = (words: NormalizedWord[]): Page => ({
 	words,
@@ -104,13 +128,40 @@ const displayDurations = (pages: Page[]): number[] =>
 		return Math.max(0, (next ? next.startMs : p.endMs) - p.startMs);
 	});
 
+/**
+ * Lines these words wrap into at the measured width. A word is never split,
+ * and one wider than the line takes as many as it needs. Conservative for
+ * scripts without spaces, which a browser can also break inside a word.
+ */
+const lineCount = (
+	words: NormalizedWord[],
+	{measure, maxLineWidth}: NonNullable<Limits['lines']>,
+): number => {
+	let lines = 1;
+	let width = 0;
+	for (const [i, {text, space}] of tokenSpacing(words.map((w) => w.text)).entries()) {
+		const w = measure(text);
+		const gap = space ? measure(space) : 0;
+		if (i > 0 && width + gap + w > maxLineWidth) {
+			lines++;
+			width = w;
+		} else {
+			width += (i > 0 ? gap : 0) + w;
+		}
+		lines += Math.max(0, Math.ceil(w / maxLineWidth) - 1);
+	}
+	return lines;
+};
+
 const withinLimits = (words: NormalizedWord[], limits: Limits): boolean => {
 	const span =
 		words.reduce((max, w) => Math.max(max, w.endMs), words[0].endMs) -
 		words[0].startMs;
 
 	return (
-		pageText(words).length <= limits.maxCharsPerPage &&
+		words.length <= limits.maxWordsPerPage &&
+		textWidth(pageText(words)) <= limits.maxCharsPerPage &&
+		(!limits.lines || lineCount(words, limits.lines) <= limits.lines.maxLines) &&
 		span <= limits.maxDurationMs
 	);
 };
@@ -131,7 +182,10 @@ const joinable = (a: Page, b: Page, limits: Limits): boolean =>
  * count trades one bad line for two.
  */
 const shiftable = (a: Page, b: Page, limits: Limits): boolean =>
-	b.startMs - a.endMs < limits.silenceGapMs &&
+	b.startMs - a.endMs < limits.silenceGapMs && sameSentence(a, b);
+
+/** The break between these two pages falls inside a sentence. */
+const sameSentence = (a: Page, b: Page): boolean =>
 	!endsSentence(a.words[a.words.length - 1].text, b.words[0].text);
 
 /**
@@ -180,16 +234,25 @@ export const createCaptionPages = ({
 	maxDurationMs = 1200,
 	silenceGapMs = 400,
 	breakOnPunctuation = true,
-	maxCharsPerPage = 42,
+	maxCharsPerPage,
 	minDurationMs = 300,
 	minWordsPerPage = 2,
+	maxWordsPerPage = Infinity,
+	measure,
+	maxLineWidth,
+	maxLines = 2,
 }: CreateCaptionPagesInput): CreateCaptionPagesOutput => {
+	const lines = measure && maxLineWidth ? {measure, maxLineWidth, maxLines} : undefined;
 	const limits: Limits = {
 		maxDurationMs,
-		maxCharsPerPage,
+		// Measured lines replace the character count unless both are asked for.
+		maxCharsPerPage: maxCharsPerPage ?? (lines ? Infinity : 42),
 		minDurationMs,
-		minWordsPerPage,
+		// A page can't be asked to hold more words than it's allowed.
+		minWordsPerPage: Math.min(minWordsPerPage, maxWordsPerPage),
+		maxWordsPerPage,
 		silenceGapMs,
+		lines,
 	};
 	const words = normalizeCaptions(captions);
 	const pages: Page[] = [];
@@ -375,14 +438,16 @@ const fixOrphans = (pages: Page[], limits: Limits): Page[] => {
 		const previous = out[i - 1];
 		const next = out[i + 1];
 
-		// One fuller page beats two thin ones, so try merging first.
-		if (previous && joinable(previous, out[i], limits)) {
+		// One fuller page beats two thin ones, so try merging first, though
+		// never across a full stop: "amanecer." was welded onto "Para las
+		// nueve," when it could have borrowed "del" from its own sentence.
+		if (previous && joinable(previous, out[i], limits) && sameSentence(previous, out[i])) {
 			out.splice(i - 1, 2, page([...previous.words, ...out[i].words]));
 			i = Math.max(0, i - 1);
 			continue;
 		}
 
-		if (next && joinable(out[i], next, limits)) {
+		if (next && joinable(out[i], next, limits) && sameSentence(out[i], next)) {
 			out.splice(i, 2, page([...out[i].words, ...next.words]));
 			continue;
 		}

@@ -1,9 +1,12 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
-import {placementStyle, resolveTheme} from '../theme';
+import {useFitTheme} from '../fit';
+import {LAYOUTS} from '../layouts';
+import {placementStyle, typeStyle} from '../theme';
 import type {PresetProps} from '../types';
 import {useTokenStates} from '../use-token-states';
 
@@ -20,8 +23,9 @@ export const EditorialEmphasis: React.FC<PresetProps & {page: TikTokPage}> = ({
 	theme,
 	emphasis,
 }) => {
-	const t = resolveTheme(theme);
-	const {tokens, timeMs} = useTokenStates({page});
+	// A word too long for the line brings the whole page down until it fits.
+	const t = useFitTheme({page, theme, layout: LAYOUTS.EditorialEmphasis});
+	const {tokens, timeMs, direction} = useTokenStates({page});
 
 	const enter = easeOutCubic(windowProgress(timeMs, page.startMs, PAGE_IN_MS));
 
@@ -30,8 +34,9 @@ export const EditorialEmphasis: React.FC<PresetProps & {page: TikTokPage}> = ({
 			<div
 				style={{
 					fontFamily: t.fontFamily,
+					direction,
 					fontSize: t.fontSize * 0.92,
-					fontWeight: 600,
+					...typeStyle(t, {fontWeight: 600}),
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
 					textWrap: 'balance',
@@ -42,39 +47,41 @@ export const EditorialEmphasis: React.FC<PresetProps & {page: TikTokPage}> = ({
 					transform: `translateY(${(1 - enter) * t.fontSize * 0.4}px)`,
 				}}
 			>
-				{tokens.map(({token, index, isActive}) => {
+				{tokens.map(({token, index, isActive, text, space}) => {
 					const em = resolveEmphasis({token, index, rules: emphasis});
 					const sweep = easeOutCubic(
 						windowProgress(timeMs, token.fromMs, UNDERLINE_MS),
 					);
 
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								position: 'relative',
-								display: 'inline-block',
-								whiteSpace: 'pre',
-								color: em?.color ?? t.textColor,
-								...em?.style,
-							}}
-						>
-							{token.text}
+						<Fragment key={token.fromMs}>
+							{space}
 							<span
-								aria-hidden
 								style={{
-									position: 'absolute',
-									left: '0.18em',
-									right: '0.05em',
-									bottom: '-0.08em',
-									height: '0.07em',
-									borderRadius: '0.04em',
-									backgroundColor: em?.color ?? t.activeColor,
-									transformOrigin: 'left center',
-									transform: `scaleX(${isActive ? sweep : 0})`,
+									position: 'relative',
+									display: 'inline-block',
+									whiteSpace: 'pre',
+									color: em?.color ?? t.textColor,
+									...em?.style,
 								}}
-							/>
-						</span>
+							>
+								{text}
+								<span
+									aria-hidden
+									style={{
+										position: 'absolute',
+										left: '0.05em',
+										right: '0.05em',
+										bottom: '-0.08em',
+										height: '0.07em',
+										borderRadius: '0.04em',
+										backgroundColor: em?.color ?? t.activeColor,
+										transformOrigin: direction === 'rtl' ? 'right center' : 'left center',
+										transform: `scaleX(${isActive ? sweep : 0})`,
+									}}
+								/>
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>

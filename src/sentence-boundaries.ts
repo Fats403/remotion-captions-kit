@@ -12,8 +12,12 @@
  * ambiguous ones the following word has to look like a fresh start.
  */
 
-/** A terminator, then any number of closing quotes or brackets. */
-const SENTENCE_END = /[.!?…]+[)\]}"'”’»›]*$/u;
+/**
+ * A terminator, then any number of closing quotes or brackets. Besides
+ * Latin's, the full stops and question marks of Chinese and Japanese
+ * ("。！？"), Arabic ("؟") and Devanagari ("।", "॥").
+ */
+const SENTENCE_END = /[.!?…。！？؟।॥]+[)\]}"'”’»›」』）】]*$/u;
 
 /** Opening quote or bracket, at the head of a word. */
 const SENTENCE_START = /^[("'“‘«‹]*[\p{Lu}\p{N}]/u;
@@ -124,8 +128,8 @@ const BARE_NUMBER = /^\p{N}+\.$/u;
 /** Strip closing quotes/brackets and any terminators to get at the word. */
 const stem = (word: string): string =>
 	word
-		.replace(/[)\]}"'”’»›]+$/u, '')
-		.replace(/[.!?…]+$/u, '')
+		.replace(/[)\]}"'”’»›」』）】]+$/u, '')
+		.replace(/[.!?…。！？؟।॥]+$/u, '')
 		.toLowerCase();
 
 /**
@@ -139,8 +143,9 @@ export const endsSentence = (word: string, nextWord?: string): boolean => {
 		return false;
 	}
 
-	// "!" and "?" are never abbreviation markers, so they always break.
-	if (/[!?…]/u.test(trimmed)) {
+	// "!" and "?" are never abbreviation markers, so they always break, and
+	// nor are the full stops of scripts without abbreviation dots.
+	if (/[!?…。！？؟।॥]/u.test(trimmed)) {
 		return true;
 	}
 
@@ -168,11 +173,12 @@ export const endsSentence = (word: string, nextWord?: string): boolean => {
 };
 
 /**
- * Clause-level punctuation — a comma, semicolon, colon or dash. Not a page
- * break on its own, but a better place to break than mid-phrase when the
- * duration or character cap forces one.
+ * Clause-level punctuation — a comma, semicolon, colon or dash, in Latin,
+ * Chinese and Japanese ("，、；：") or Arabic ("،؛"). Not a page break on
+ * its own, but a better place to break than mid-phrase when the duration
+ * or character cap forces one.
  */
-const CLAUSE_END = /[,;:—–-]["'”’]?$/u;
+const CLAUSE_END = /[,;:—–\-，、；：،؛]["'”’」』]?$/u;
 
 export const endsClause = (word: string): boolean =>
 	CLAUSE_END.test(word.trim());

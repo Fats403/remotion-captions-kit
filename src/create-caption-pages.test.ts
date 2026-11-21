@@ -1,5 +1,6 @@
-import type {Caption} from '@remotion/captions';
 import {describe, expect, test} from 'vitest';
+import type {Caption} from '@remotion/captions';
+
 import {captionsFromWords} from './captions-from-words';
 import {createCaptionPages} from './create-caption-pages';
 
@@ -564,4 +565,80 @@ describe('malformed input', () => {
 			expect(pages[i].startMs).toBeGreaterThanOrEqual(pages[i - 1].startMs);
 		}
 	});
+});
+
+test('reads a Japanese page without spaces, and breaks it at its full stop', () => {
+	const captions = words([
+		['毎朝、', 0.24, 1.2],
+		['夜明け', 1.2, 1.6],
+		['前に', 1.68, 2.0],
+		['工房を', 2.08, 2.6],
+		['開けます。', 2.64, 3.4],
+		['九時には', 3.76, 4.6],
+	]);
+	const {pages} = createCaptionPages({captions, maxDurationMs: 5000, minDurationMs: 0, minWordsPerPage: 1});
+	expect(pages.map((p) => p.text)).toEqual(['毎朝、夜明け前に工房を開けます。', '九時には']);
+});
+
+test('caps a Chinese page by width, two Latin letters to a character', () => {
+	// Twelve characters is 24 wide: one page at 30, two at 20.
+	const captions = words([
+		['每天', 0, 0.3],
+		['早上', 0.3, 0.6],
+		['我在', 0.6, 0.9],
+		['日出', 0.9, 1.2],
+		['之前', 1.2, 1.5],
+		['打开', 1.5, 1.8],
+	]);
+	expect(createCaptionPages({captions, maxDurationMs: 5000, maxCharsPerPage: 30}).pages).toHaveLength(1);
+	expect(createCaptionPages({captions, maxDurationMs: 5000, maxCharsPerPage: 20}).pages.length).toBeGreaterThan(1);
+});
+
+test('an orphan at a sentence end borrows from its own sentence, never the next', () => {
+	// A Spanish voiceover take: a cap break strands "amanecer." before "Para".
+	const captions = words([
+		['Cada', 0.32, 0.64], ['mañana', 0.64, 1.2], ['abro', 1.2, 1.6], ['el', 1.6, 1.76],
+		['taller', 1.76, 2.08], ['antes', 2.08, 2.56], ['del', 2.56, 2.8], ['amanecer.', 2.8, 3.6],
+		['Para', 3.84, 4.08], ['las', 4.08, 4.32], ['nueve,', 4.32, 4.88],
+	]);
+	const {pages} = createCaptionPages({captions, maxDurationMs: 2500});
+	expect(pages.map((p) => p.text)).toEqual([
+		'Cada mañana abro el taller antes',
+		'del amanecer.',
+		'Para las nueve,',
+	]);
+});
+
+describe('pages sized by measured width', () => {
+	// A stand-in font: every character 10px wide, a space 10px.
+	const measure = (text: string) => text.length * 10;
+	const captions = words([
+		['every', 0, 0.2], ['great', 0.2, 0.4], ['video', 0.4, 0.6], ['starts', 0.6, 0.8],
+		['with', 0.8, 1.0], ['a', 1.0, 1.1], ['story', 1.1, 1.3],
+	]);
+
+	test('a page holds what wraps into maxLines lines, whatever its character count', () => {
+		// 120px lines: "every great" is 110, "video starts" is 120.
+		const {pages} = createCaptionPages({captions, measure, maxLineWidth: 120, maxLines: 2, maxDurationMs: 5000});
+		expect(pages.map((p) => p.text)).toEqual(['every great video starts', 'with a story']);
+		const one = createCaptionPages({captions, measure, maxLineWidth: 120, maxLines: 1, maxDurationMs: 5000});
+		expect(one.pages.map((p) => p.text)).toEqual(['every great', 'video starts', 'with a story']);
+	});
+
+	test('the character cap steps aside for measured lines unless it is set too', () => {
+		const wide = createCaptionPages({captions, measure, maxLineWidth: 1000, maxLines: 1, maxDurationMs: 5000});
+		expect(wide.pages).toHaveLength(1);
+		const capped = createCaptionPages({captions, measure, maxLineWidth: 1000, maxLines: 1, maxDurationMs: 5000, maxCharsPerPage: 12});
+		expect(capped.pages.length).toBeGreaterThan(1);
+	});
+});
+
+test('maxWordsPerPage keeps short-form pages to a few words', () => {
+	const captions = words([
+		['every', 0, 0.2], ['great', 0.2, 0.4], ['video', 0.4, 0.6], ['starts', 0.6, 0.8], ['with', 0.8, 1.0],
+	]);
+	expect(createCaptionPages({captions, maxWordsPerPage: 2}).pages.map((p) => p.text)).toEqual([
+		'every great', 'video starts', 'with',
+	]);
+	expect(createCaptionPages({captions, maxWordsPerPage: 1}).pages).toHaveLength(5);
 });

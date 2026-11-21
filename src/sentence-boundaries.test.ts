@@ -13,6 +13,13 @@ describe('endsSentence', () => {
 		['hello', 'there', false],
 		['', 'there', false],
 
+		// Other scripts' full stops and question marks.
+		['工房を開けます。', '九時には', true],
+		['开门了？', '是的', true],
+		['هل أنت مستعد؟', 'نعم', true],
+		['पहले वर्कशॉप खोलता हूँ।', 'नौ', true],
+		['「終わり。」', '次', true],
+
 		// Terminators wrapped in closing punctuation.
 		['"done."', 'next', true],
 		['“done.”', 'next', true],
@@ -79,6 +86,9 @@ describe('endsClause', () => {
 		['wait—', true],
 		['pause–', true],
 		['"quoted,"', true],
+		['早上，', true],
+		['工房、', true],
+		['الساعة،', true],
 		['car', false],
 		['page.', false],
 		['really?', false],

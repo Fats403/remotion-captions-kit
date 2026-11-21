@@ -10,6 +10,14 @@ import {KineticSlam} from '../src/presets/kinetic-slam';
 import {NeonGlow} from '../src/presets/neon-glow';
 import {PillKaraoke} from '../src/presets/pill-karaoke';
 import {WeightShift} from '../src/presets/weight-shift';
+import {Bounce} from '../src/presets/bounce';
+import {HighlightBox} from '../src/presets/highlight-box';
+import {OneWord} from '../src/presets/one-word';
+import {PopHighlight} from '../src/presets/pop-highlight';
+import {PopIn} from '../src/presets/pop-in';
+import {PRESETS, type PresetName} from '../src/presets';
+import type {WordTiming} from '../src/types';
+import {LANGUAGE_SAMPLES} from './language-samples';
 import type {CaptionTheme, EmphasisRule, PresetProps} from '../src/types';
 import {SAMPLE_WORDS} from './sample';
 
@@ -23,9 +31,10 @@ type Preset = React.FC<PresetProps & {page: TikTokPage}>;
 
 const CELL_THEME: CaptionTheme = {position: 'center', fontSize: 58};
 
-const pagesFor = () => {
-	const {captions} = captionsFromWords({words: SAMPLE_WORDS});
-	return createCaptionPages({captions, maxDurationMs: 1500}).pages;
+const pagesFor = (name?: PresetName, words: WordTiming[] = SAMPLE_WORDS) => {
+	const {captions} = captionsFromWords({words});
+	const own = name ? (PRESETS[name] as {pagination?: object}).pagination : undefined;
+	return createCaptionPages({captions, maxDurationMs: 1500, ...own}).pages;
 };
 
 const Cell: React.FC<{
@@ -34,8 +43,11 @@ const Cell: React.FC<{
 	Preset: Preset;
 	dark?: boolean;
 	emphasis?: EmphasisRule[];
-}> = ({label, frame, Preset, dark, emphasis}) => {
-	const pages = pagesFor();
+	/** Paged the way this preset is made for. */
+	name?: PresetName;
+	words?: WordTiming[];
+}> = ({label, frame, Preset, dark, emphasis, name, words}) => {
+	const pages = pagesFor(name, words);
 
 	return (
 		<div style={{position: 'relative', overflow: 'hidden', borderRadius: 12}}>
@@ -72,13 +84,13 @@ const Cell: React.FC<{
 
 const EMPHASIS: EmphasisRule[] = [{words: ['story'], color: '#FFD400'}];
 
-/** All six presets, each frozen mid-motion. */
+/** All eleven presets, each frozen mid-motion, and one reading right to left. */
 export const ShowcaseGrid: React.FC = () => (
 	<AbsoluteFill
 		style={{
 			background: '#0a0a0c',
 			display: 'grid',
-			gridTemplateColumns: '1fr 1fr',
+			gridTemplateColumns: '1fr 1fr 1fr',
 			gridAutoRows: '1fr',
 			gap: 10,
 			padding: 10,
@@ -91,6 +103,12 @@ export const ShowcaseGrid: React.FC = () => (
 		<Cell label="WeightShift" frame={33} Preset={WeightShift} />
 		<Cell label="NeonGlow" frame={33} Preset={NeonGlow} dark />
 		<Cell label="EditorialEmphasis" frame={37} Preset={EditorialEmphasis} />
+		<Cell label="PopHighlight" frame={33} Preset={PopHighlight} name="PopHighlight" />
+		<Cell label="HighlightBox" frame={33} Preset={HighlightBox} name="HighlightBox" />
+		<Cell label="Bounce" frame={30} Preset={Bounce} name="Bounce" />
+		<Cell label="OneWord" frame={31} Preset={OneWord} name="OneWord" />
+		<Cell label="PopIn" frame={68} Preset={PopIn} />
+		<Cell label="KaraokeFill · Arabic" frame={46} Preset={KaraokeFill} words={LANGUAGE_SAMPLES.ar} />
 	</AbsoluteFill>
 );
 
@@ -124,8 +142,8 @@ export const showcaseCompositions = (
 			component={ShowcaseGrid}
 			durationInFrames={90}
 			fps={30}
-			width={1440}
-			height={1080}
+			width={2160}
+			height={1440}
 		/>
 		<Composition
 			id="EmphasisShowcase"

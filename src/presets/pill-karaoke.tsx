@@ -1,9 +1,12 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
-import {placementStyle, resolveTheme} from '../theme';
+import {useFitTheme} from '../fit';
+import {LAYOUTS} from '../layouts';
+import {placementStyle, typeStyle} from '../theme';
 import type {PresetProps} from '../types';
 import {useTokenStates} from '../use-token-states';
 
@@ -22,8 +25,9 @@ export const PillKaraoke: React.FC<PresetProps & {page: TikTokPage}> = ({
 	theme,
 	emphasis,
 }) => {
-	const t = resolveTheme({textColor: '#1e1e20', ...theme});
-	const {tokens, timeMs} = useTokenStates({page});
+	// A word too long for the line brings the whole page down until it fits.
+	const t = useFitTheme({page, theme: {textColor: '#1e1e20', ...theme}, layout: LAYOUTS.PillKaraoke});
+	const {tokens, timeMs, direction} = useTokenStates({page});
 
 	// Pill scales in gently when the page lands.
 	const enter = easeOutCubic(windowProgress(timeMs, page.startMs, 160));
@@ -33,8 +37,9 @@ export const PillKaraoke: React.FC<PresetProps & {page: TikTokPage}> = ({
 			<div
 				style={{
 					fontFamily: t.fontFamily,
+					direction,
 					fontSize: t.fontSize,
-					fontWeight: 800,
+					...typeStyle(t, {fontWeight: 800}),
 					whiteSpace: 'pre-wrap',
 					textWrap: 'balance',
 					textAlign: 'center',
@@ -47,24 +52,26 @@ export const PillKaraoke: React.FC<PresetProps & {page: TikTokPage}> = ({
 					boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
 				}}
 			>
-				{tokens.map(({token, index}) => {
+				{tokens.map(({token, index, text, space}) => {
 					const em = resolveEmphasis({token, index, rules: emphasis});
 					const fade = easeOutCubic(
 						windowProgress(timeMs, token.fromMs, WORD_FADE_MS),
 					);
 
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								whiteSpace: 'pre',
-								color: em?.color ?? t.textColor,
-								opacity: 0.35 + 0.65 * fade,
-								...em?.style,
-							}}
-						>
-							{token.text}
-						</span>
+						<Fragment key={token.fromMs}>
+							{space}
+							<span
+								style={{
+									whiteSpace: 'pre',
+									color: em?.color ?? t.textColor,
+									opacity: 0.35 + 0.65 * fade,
+									...em?.style,
+								}}
+							>
+								{text}
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>

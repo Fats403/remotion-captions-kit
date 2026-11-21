@@ -1,5 +1,6 @@
 import type {TikTokPage, TikTokToken} from '@remotion/captions';
 import {useCurrentFrame, useVideoConfig} from 'remotion';
+import {textDirection, tokenSpacing} from './scripts';
 
 export type TokenState = {
 	token: TikTokToken;
@@ -10,6 +11,14 @@ export type TokenState = {
 	hasAppeared: boolean;
 	/** 0 before the word, 0→1 while spoken, 1 after. */
 	progress: number;
+	/** The word as drawn, without its leading space. */
+	text: string;
+	/**
+	 * What goes before the word: a space, or nothing at the start of the
+	 * page and where two words of a script without spaces meet. Draw it
+	 * outside the word's own box, so the line can wrap there.
+	 */
+	space: string;
 };
 
 /**
@@ -23,7 +32,8 @@ export const useCaptionTimeMs = (page: TikTokPage): number => {
 };
 
 /**
- * Per-token timing state, the one computation every caption style needs.
+ * Per-token timing state, the one computation every caption style needs,
+ * with each word's spacing and the page's reading direction.
  * Time math is absolute-vs-relative safe: the page's own startMs is added
  * back to the sequence-local frame, so tokens can never light up early/late.
  */
@@ -31,8 +41,9 @@ export const useTokenStates = ({
 	page,
 }: {
 	page: TikTokPage;
-}): {tokens: TokenState[]; timeMs: number} => {
+}): {tokens: TokenState[]; timeMs: number; direction: 'ltr' | 'rtl'} => {
 	const timeMs = useCaptionTimeMs(page);
+	const spacing = tokenSpacing(page.tokens.map((t) => t.text));
 
 	const tokens = page.tokens.map((token, index) => {
 		const span = token.toMs - token.fromMs;
@@ -48,8 +59,9 @@ export const useTokenStates = ({
 			isActive: timeMs >= token.fromMs && timeMs < token.toMs,
 			hasAppeared: timeMs >= token.fromMs,
 			progress,
+			...spacing[index],
 		};
 	});
 
-	return {tokens, timeMs};
+	return {tokens, timeMs, direction: textDirection(page.tokens.map((t) => t.text).join(''))};
 };

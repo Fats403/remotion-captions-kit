@@ -8,10 +8,20 @@ import {KineticSlam} from '../src/presets/kinetic-slam';
 import {NeonGlow} from '../src/presets/neon-glow';
 import {PillKaraoke} from '../src/presets/pill-karaoke';
 import {WeightShift} from '../src/presets/weight-shift';
+import {Bounce} from '../src/presets/bounce';
+import {HighlightBox} from '../src/presets/highlight-box';
+import {OneWord} from '../src/presets/one-word';
+import {PopHighlight} from '../src/presets/pop-highlight';
+import {PopIn} from '../src/presets/pop-in';
 import type {EmphasisRule, PresetProps} from '../src/types';
 import {useCaptionPages} from '../src/use-caption-pages';
 import {SAMPLE_WORDS} from './sample';
+import {languageCompositions} from './Languages';
+import {oneLineCompositions} from './OneLine';
+import {autoShrinkComposition} from './AutoShrink';
 import {showcaseCompositions} from './Showcase';
+import {gifCompositions} from './Gifs';
+import {customStyleComposition} from './CustomStyle';
 
 const FPS = 30;
 const DURATION_S = 10;
@@ -71,11 +81,21 @@ const DEMOS: [string, React.FC][] = [
 	['WeightShift', makeDemo(WeightShift)],
 	['NeonGlow', makeDemo(NeonGlow, {dark: true})],
 	['EditorialEmphasis', makeDemo(EditorialEmphasis, {withEmphasis: true})],
+	['PopHighlight', makeDemo(PopHighlight)],
+	['HighlightBox', makeDemo(HighlightBox)],
+	['Bounce', makeDemo(Bounce)],
+	['OneWord', makeDemo(OneWord)],
+	['PopIn', makeDemo(PopIn)],
 ];
 
 export const Root: React.FC = () => (
 	<>
 		{showcaseCompositions}
+		{languageCompositions}
+		{oneLineCompositions}
+		{autoShrinkComposition}
+		{gifCompositions}
+		{customStyleComposition}
 		{DEMOS.map(([id, Demo]) => (
 			<Composition
 				key={id}

@@ -1,9 +1,12 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutBack, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
-import {placementStyle, resolveTheme} from '../theme';
+import {useFitTheme} from '../fit';
+import {LAYOUTS} from '../layouts';
+import {placementStyle, typeStyle} from '../theme';
 import type {PresetProps} from '../types';
 import {useTokenStates} from '../use-token-states';
 
@@ -19,17 +22,18 @@ export const KineticSlam: React.FC<PresetProps & {page: TikTokPage}> = ({
 	theme,
 	emphasis,
 }) => {
-	const t = resolveTheme(theme);
-	const {tokens, timeMs} = useTokenStates({page});
+	// A word too long for the line brings the whole page down until it fits.
+	const t = useFitTheme({page, theme, layout: LAYOUTS.KineticSlam});
+	const {tokens, timeMs, direction} = useTokenStates({page});
 
 	return (
 		<AbsoluteFill style={placementStyle(t)}>
 			<div
 				style={{
 					fontFamily: t.fontFamily,
+					direction,
 					fontSize: t.fontSize,
-					fontWeight: 900,
-					textTransform: 'uppercase',
+					...typeStyle(t, {fontWeight: 900, uppercase: true}),
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
 					lineHeight: 1.15,
@@ -37,7 +41,7 @@ export const KineticSlam: React.FC<PresetProps & {page: TikTokPage}> = ({
 					textShadow: '0 3px 0 rgba(0,0,0,0.35), 0 6px 24px rgba(0,0,0,0.5)',
 				}}
 			>
-				{tokens.map(({token, index, hasAppeared}) => {
+				{tokens.map(({token, index, hasAppeared, text, space}) => {
 					if (!hasAppeared) {
 						// Reserve no space: words pop into a line that grows.
 						return null;
@@ -46,19 +50,21 @@ export const KineticSlam: React.FC<PresetProps & {page: TikTokPage}> = ({
 					const p = easeOutBack(windowProgress(timeMs, token.fromMs, SLAM_MS));
 
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								display: 'inline-block',
-								whiteSpace: 'pre',
-								color: em?.color ?? t.textColor,
-								transform: `scale(${0.4 + 0.6 * p})`,
-								opacity: Math.min(1, p * 2),
-								...em?.style,
-							}}
-						>
-							{token.text}
-						</span>
+						<Fragment key={token.fromMs}>
+							{space}
+							<span
+								style={{
+									display: 'inline-block',
+									whiteSpace: 'pre',
+									color: em?.color ?? t.textColor,
+									transform: `scale(${0.4 + 0.6 * p})`,
+									opacity: Math.min(1, p * 2),
+									...em?.style,
+								}}
+							>
+								{text}
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>

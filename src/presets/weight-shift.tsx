@@ -1,9 +1,12 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
-import {placementStyle, resolveTheme} from '../theme';
+import {useFitTheme} from '../fit';
+import {LAYOUTS} from '../layouts';
+import {placementStyle, typeStyle} from '../theme';
 import type {PresetProps} from '../types';
 import {useTokenStates} from '../use-token-states';
 
@@ -28,16 +31,18 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 	theme,
 	emphasis,
 }) => {
-	const t = resolveTheme(theme);
-	const {tokens, timeMs} = useTokenStates({page});
+	// A word too long for the line brings the whole page down until it fits.
+	const t = useFitTheme({page, theme, layout: LAYOUTS.WeightShift});
+	const {tokens, timeMs, direction} = useTokenStates({page});
 
 	return (
 		<AbsoluteFill style={placementStyle(t)}>
 			<div
 				style={{
 					fontFamily: t.fontFamily,
+					direction,
 					fontSize: t.fontSize,
-					fontWeight: 600,
+					...typeStyle(t, {fontWeight: 600}),
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
 					textWrap: 'balance',
@@ -45,7 +50,7 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 					textShadow: '0 2px 14px rgba(0,0,0,0.6)',
 				}}
 			>
-				{tokens.map(({token, index, isActive, hasAppeared}) => {
+				{tokens.map(({token, index, isActive, hasAppeared, text, space}) => {
 					const em = resolveEmphasis({token, index, rules: emphasis});
 					// Ease in on activation; ease back out when the word ends.
 					const inP = easeOutCubic(
@@ -58,20 +63,22 @@ export const WeightShift: React.FC<PresetProps & {page: TikTokPage}> = ({
 					const color = em?.color ?? t.textColor;
 
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								display: 'inline-block',
-								whiteSpace: 'pre',
-								color,
-								opacity: 0.55 + 0.45 * lift,
-								transform: `scale(${1 + 0.07 * lift})`,
-								WebkitTextStroke: `${(t.fontSize / 40) * lift}px ${color}`,
-								...em?.style,
-							}}
-						>
-							{token.text}
-						</span>
+						<Fragment key={token.fromMs}>
+							{space}
+							<span
+								style={{
+									display: 'inline-block',
+									whiteSpace: 'pre',
+									color,
+									opacity: 0.55 + 0.45 * lift,
+									transform: `scale(${1 + 0.07 * lift})`,
+									WebkitTextStroke: `${(t.fontSize / 40) * lift}px ${color}`,
+									...em?.style,
+								}}
+							>
+								{text}
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>

@@ -17,6 +17,13 @@ export type WordTiming = {
 export type CaptionPosition = 'top' | 'center' | 'bottom';
 
 /**
+ * A platform whose buttons and text sit over the bottom and right of a
+ * vertical video. Sets edgeOffset and paddingX to clear them; either can
+ * still be set by hand.
+ */
+export type SafeArea = 'tiktok' | 'reels' | 'shorts' | 'all';
+
+/**
  * One theme shared by every preset. A preset reads only the fields it needs;
  * unset fields fall back to the preset's own defaults.
  */
@@ -32,11 +39,16 @@ export type CaptionTheme = {
 	pillColor?: string;
 	position?: CaptionPosition;
 	/**
-	 * Distance from the chosen edge as a fraction of composition height
-	 * (ignored for "center"). Default 0.1, the bottom 20% guideline.
-	 * Raise it (~0.18) to clear TikTok/Reels UI chrome.
+	 * Distance from the chosen edge as a fraction of composition height.
+	 * At "center" it lifts the block above the middle by that fraction
+	 * instead. Default 0.1 (0 at "center"), or the safe area's.
+	 *
+	 * Before 1.0 this was applied as CSS padding, which measures against the
+	 * composition's width, so 0.18 on a 1080x1920 frame left 194px, not 346.
 	 */
 	edgeOffset?: number;
+	/** Clears a platform's interface; see SafeArea. */
+	safeArea?: SafeArea;
 	/**
 	 * Horizontal padding as a fraction of composition width. Default 0.06.
 	 */
@@ -46,6 +58,18 @@ export type CaptionTheme = {
 	 * Default 1 (padding only). ~0.65 reads better on wide compositions.
 	 */
 	maxWidth?: number;
+	/** Overrides the preset's own weight. */
+	fontWeight?: number;
+	/** Set every word in capitals. */
+	uppercase?: boolean;
+	/**
+	 * An outline drawn behind the letters, so it never eats into them, in
+	 * px. Presets that outline by default take theirs when unset; 0 turns
+	 * it off.
+	 */
+	strokeWidth?: number;
+	/** Outline color. Default black. */
+	strokeColor?: string;
 };
 
 /**

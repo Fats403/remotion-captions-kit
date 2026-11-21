@@ -1,9 +1,12 @@
 import type {TikTokPage} from '@remotion/captions';
 import type React from 'react';
+import {Fragment} from 'react';
 import {AbsoluteFill} from 'remotion';
 import {easeOutCubic, windowProgress} from '../ease';
 import {resolveEmphasis} from '../emphasis';
-import {placementStyle, resolveTheme} from '../theme';
+import {useFitTheme} from '../fit';
+import {LAYOUTS} from '../layouts';
+import {placementStyle, typeStyle} from '../theme';
 import type {PresetProps} from '../types';
 import {useTokenStates} from '../use-token-states';
 
@@ -19,23 +22,25 @@ export const NeonGlow: React.FC<PresetProps & {page: TikTokPage}> = ({
 	theme,
 	emphasis,
 }) => {
-	const t = resolveTheme(theme);
-	const {tokens, timeMs} = useTokenStates({page});
+	// A word too long for the line brings the whole page down until it fits.
+	const t = useFitTheme({page, theme, layout: LAYOUTS.NeonGlow});
+	const {tokens, timeMs, direction} = useTokenStates({page});
 
 	return (
 		<AbsoluteFill style={placementStyle(t)}>
 			<div
 				style={{
 					fontFamily: t.fontFamily,
+					direction,
 					fontSize: t.fontSize,
-					fontWeight: 800,
+					...typeStyle(t, {fontWeight: 800}),
 					textAlign: 'center',
 					whiteSpace: 'pre-wrap',
 					textWrap: 'balance',
 					lineHeight: 1.25,
 				}}
 			>
-				{tokens.map(({token, index, isActive, hasAppeared}) => {
+				{tokens.map(({token, index, isActive, hasAppeared, text, space}) => {
 					const em = resolveEmphasis({token, index, rules: emphasis});
 					const glowColor = em?.color ?? t.activeColor;
 					const ignite = easeOutCubic(
@@ -45,23 +50,25 @@ export const NeonGlow: React.FC<PresetProps & {page: TikTokPage}> = ({
 					const glow = isActive ? ignite : hasAppeared ? 0.35 : 0;
 
 					return (
-						<span
-							key={token.fromMs}
-							style={{
-								display: 'inline-block',
-								whiteSpace: 'pre',
-								color: glow > 0 ? glowColor : t.textColor,
-								opacity: hasAppeared || isActive ? 1 : 0.75,
-								textShadow:
-									glow > 0
-										? `0 0 ${8 * glow}px ${glowColor}, 0 0 ${24 * glow}px ${glowColor}, 0 0 ${56 * glow}px ${glowColor}, 0 2px 10px rgba(0,0,0,0.6)`
-										: '0 2px 10px rgba(0,0,0,0.6)',
-								transform: `scale(${1 + 0.05 * (isActive ? ignite : 0)})`,
-								...em?.style,
-							}}
-						>
-							{token.text}
-						</span>
+						<Fragment key={token.fromMs}>
+							{space}
+							<span
+								style={{
+									display: 'inline-block',
+									whiteSpace: 'pre',
+									color: glow > 0 ? glowColor : t.textColor,
+									opacity: hasAppeared || isActive ? 1 : 0.75,
+									textShadow:
+										glow > 0
+											? `0 0 ${8 * glow}px ${glowColor}, 0 0 ${24 * glow}px ${glowColor}, 0 0 ${56 * glow}px ${glowColor}, 0 2px 10px rgba(0,0,0,0.6)`
+											: '0 2px 10px rgba(0,0,0,0.6)',
+									transform: `scale(${1 + 0.05 * (isActive ? ignite : 0)})`,
+									...em?.style,
+								}}
+							>
+								{text}
+							</span>
+						</Fragment>
 					);
 				})}
 			</div>
